@@ -191,6 +191,7 @@ class PageRank:
                 pagerank = 1 - self.dampingFactor + self.dampingFactor * prT
                 # Pagerank speichern
                 page.setPagerank(pagerank)
+
                 #print(f"PR({page.name}) = {round(page.pagerank, 4)}")
 
                 difference.append(self.calculateDifference(lastRank, pagerank))
@@ -199,11 +200,13 @@ class PageRank:
             # Schleife wird beendet, wenn die Veränderungen der PRs aller Seiten im Vergleich zum vorigen PRs < 1% sind
             x = False
             for diff in difference:
-                if diff >= 1:
+                if diff >= 0.1:
                     x = True
             if not x:
                 nextLoop = False
                 print (f"{counter} Durchläufe benötigt")
+                sumPageranks = self.getPRSum()
+                print (f"Summe aller Pageranks = {sumPageranks}")
 
             # Anzahl Durchläufe
             counter = counter + 1
@@ -216,6 +219,16 @@ class PageRank:
         #print (f"Unterschied zu letztem PR = {round(difference, 1)} %")
         #print ('')
         return difference
+
+    # Gesamtsumme aller PRs berechnen
+    def getPRSum(self):
+        sumPR = 0
+
+        for key in self.pageList:
+            page = self.pageList[key]
+            sumPR += page.pagerank
+        return sumPR
+
 
 
     # Anzeigen der Seiten und deren finalen PRs (sortiert nach dem PR)

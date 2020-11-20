@@ -13,3 +13,4 @@ class Page:
 
     def setPagerank(self, PR):
         self.pagerank = PR
+

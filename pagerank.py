@@ -24,13 +24,31 @@ class PageRank:
 
     # Programmablauf
     def start(self):
+        while True:
+            print ("Bitte wählen:")
+            print ("Beispielgraphen: '1', '2', '3' oder '4'")
+            print ("WikiMedia DB:    'w'")
+            print ("beenden:         'e'")
 
-        self.wikiDatabase()
+            command = str(input())
 
-        #self.exampleOne()
-        #self.exampleTwo()
-        #self.exampleThree()
-        #self.exampleFour()
+            if command == '1':
+                self.exampleOne()
+            elif command == '2':
+                self.exampleTwo()
+            elif command == '3':
+                self.exampleThree()
+            elif command == '4':
+                self.exampleFour()
+
+            elif command == 'w':
+                self.wikiDatabase()
+
+            elif command == 'e':
+                exit()
+
+            else:
+                print ("Falsche Eingabe.")
 
 
     # vorgegebene Seitenkonstellationen
@@ -146,18 +164,17 @@ class PageRank:
     # eingehende Links aller Seiten ermitteln
     def findLinksIn(self):
 
-        for key in self.pageList: # key + value aus dict?
+        for key in self.pageList:
             page = self.pageList[key]
             name = str(page.name)
             linksIn = []
-            linksInValue = []
 
             for otherKey in self.pageList:
                 otherPage = self.pageList[otherKey]
 
                 for index, link in enumerate(otherPage.linksOut):
                     if link: # leere linksOut verursacht sonst Fehler
-                        link = link # list item(?)
+                        link = link # list item
                         if link == name:
                             linksIn.append(otherPage.name)
 
@@ -197,7 +214,7 @@ class PageRank:
                 difference.append(self.calculateDifference(lastRank, pagerank))
 
 
-            # Schleife wird beendet, wenn die Veränderungen der PRs aller Seiten im Vergleich zum vorigen PRs < 1% sind
+            # Schleife wird beendet, wenn die Veränderungen der PRs aller Seiten im Vergleich zum vorigen PR < 0.1% sind
             x = False
             for diff in difference:
                 if diff >= 0.1:
@@ -253,6 +270,7 @@ class PageRank:
                 j = i
             print(f"{j}. {page[1]}{p} {page[0]}")
             i += 1
+        print("")
 
 
     def createPlaceholder(self, pageName):

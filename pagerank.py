@@ -5,46 +5,48 @@ from mysql.connector import errorcode
 class PageRank:
 
     def __init__(self, d = 0.85):
-        self.dampingFactor = d
-        self.pageList = dict() # Liste mit Seiten-Objekten
-        # Datenbankverbindung
-        self.conn = False
-        try:
-            self.conn = mysql.connector.connect(
-                host="localhost", user="root", password="", database="mediawiki")
-            print("DB Verbindung aufgebaut.")
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("Something is wrong with your user name or password")
-            elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print("Database does not exist")
-            else:
-                print(err)
+        self.dampingFactor = d  # Dämpfungsfaktor, Standard: 0,85
+        self.pageList = dict()  # Liste mit Seiten-Objekten, sodass sie durchlaufen werden können
+        self.conn = False # für die DB-Verbindung
 
 
     # Programmablauf
     def start(self):
+
+        # Auswählen der Graphenkonstellation
         while True:
+
+            # pageList leeren
+            self.pageList = dict()
+
             print ("Bitte wählen:")
             print ("Beispielgraphen: '1', '2', '3' oder '4'")
-            print ("WikiMedia DB:    'w'")
-            print ("beenden:         'e'")
+            print ("Mediawiki-DB:    'w'")
+            print ("beenden:         'exit'")
 
             command = str(input())
 
+            print ("")
+
             if command == '1':
+                print("Beispielgraph 1:")
                 self.exampleOne()
             elif command == '2':
+                print("Beispielgraph 2:")
                 self.exampleTwo()
             elif command == '3':
+                print("Beispielgraph 3:")
                 self.exampleThree()
             elif command == '4':
+                print("Beispielgraph 4:")
                 self.exampleFour()
 
             elif command == 'w':
-                self.wikiDatabase()
+                print("Mediawiki-Datenbank:")
+                self.mediawikiDatabase()
 
-            elif command == 'e':
+            elif command == 'exit':
+                print ("Tschüss!")
                 exit()
 
             else:
@@ -57,14 +59,12 @@ class PageRank:
         PageA = Page("A1", ["B1"])
         PageB = Page("B1", ["A1"])
 
-        self.pageList = dict()
         self.pageList['A1'] = PageA
         self.pageList['B1'] = PageB
 
         # eingehende Links ermitteln & in Seiten speichern
         self.findLinksIn()
-        print("")
-        print("Ergebnisse Aufgabe 1:")
+
         # Pageranks berechnen
         self.Pagerank()
 
@@ -74,15 +74,13 @@ class PageRank:
         PageB = Page("B2", ["A2"])
         PageC = Page("C2", ["B2"])
 
-        self.pageList = dict()
         self.pageList['A2'] = PageA
         self.pageList['B2'] = PageB
         self.pageList['C2'] = PageC
 
         # eingehende Links ermitteln & in Seiten speichern
         self.findLinksIn()
-        print("")
-        print("Ergebnisse Aufgabe 2:")
+
         # Pageranks berechnen
         self.Pagerank()
 
@@ -92,15 +90,13 @@ class PageRank:
         PageB = Page("B3", ["A3", "C3"])
         PageC = Page("C3", [])
 
-        self.pageList = dict()
         self.pageList['A3'] = PageA
         self.pageList['B3'] = PageB
         self.pageList['C3'] = PageC
 
         # eingehende Links ermitteln & in Seiten speichern
         self.findLinksIn()
-        print("")
-        print("Ergebnisse Aufgabe 3:")
+
         # Pageranks berechnen
         self.Pagerank()
 
@@ -110,28 +106,31 @@ class PageRank:
         PageB = Page("B4", ["C4"])
         PageC = Page("C4", [])
 
-        self.pageList = dict()
         self.pageList['A4'] = PageA
         self.pageList['B4'] = PageB
         self.pageList['C4'] = PageC
 
         # eingehende Links ermitteln & in Seiten speichern
         self.findLinksIn()
-        print("")
-        print("Ergebnisse Aufgabe 4:")
+
         # Pageranks berechnen
         self.Pagerank()
 
 
-    # Analyse der Wiki-Datenbank
-    def wikiDatabase(self):
+    # Analyse der Mediawiki-Datenbank
+    def mediawikiDatabase(self):
+
+        # Verbindungsaufbau zur Datenbank
+        self.connectToDB('localhost', 'root', '', 'mediawiki')
+
+        # nicht ausführen, wenn keine Verbindung zur Datenbank möglich ist.
         if not self.conn:
-            print("Keine Datenbankverbindung verfügbar")
-            return False
+            print("Keine Datenbankverbindung verfügbar!")
+            return False # abbrechen
 
         c = self.conn.cursor()
 
-        # Namen aller Seiten + Namen der Seiten, auf die sie zeigen
+        # Name & ausgehende Links jeder Seite
         stm = """
             SELECT p.page_title pageName, GROUP_CONCAT(CONVERT(pl.pl_title USING utf8)) linksOut
             FROM page p
@@ -141,25 +140,35 @@ class PageRank:
         """
         c.execute(stm)
 
-        # pageList leeren
-        self.pageList = dict()
-
         # DB Ergebnisse durchlaufen
         for entry in c:
-
+            # group_concat(ausgehende Links) in Liste verwandeln
             links = entry[1].split(',')
 
+            # Seitenobjekt erstellen & zu Liste hinzufügen
             PageX = Page(entry[0], links)
             self.pageList[PageX.name] = PageX
 
 
         # eingehende Links ermitteln & in Seiten speichern
         self.findLinksIn()
-        print("")
-        print("Ergebnisse der Wiki-DB:")
+
         # Pageranks berechnen
         self.Pagerank()
 
+    def connectToDB(self, host, user, password, database):
+
+        try:
+            self.conn = mysql.connector.connect(
+                host=host, user=user, password=password, database=database)
+            print("DB Verbindung aufgebaut.")
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                print("DB: Invalide Logindaten.")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                print("DB existiert nicht.")
+            else:
+                print(err)
 
     # eingehende Links aller Seiten ermitteln
     def findLinksIn(self):
@@ -184,21 +193,18 @@ class PageRank:
 
     def Pagerank(self):
         counter = 1 # Zählen der Durchläufe
-        nextLoop = True # zum abbrechen der Schleife
+        nextLoop = True
 
 
         while nextLoop:
 
             difference = []
 
-            # Durchlauf Nr.:
-            #print ('----------------------------------')
-            #print(f"{counter}. Durchlauf:")
 
             for key in self.pageList:
                 page = self.pageList[key]
                 lastRank = page.pagerank
-                prT = 0  # hintere Teil der Gleichung ( PR(T) / C(T) )
+                prT = 0  # hintere Teil der Gleichung ( PR(T1) / C(T1) + ... + PR(Tn) / C(Tn) )
 
                 for link in page.linksIn:
                     otherPage = self.pageList[link]
@@ -208,8 +214,6 @@ class PageRank:
                 pagerank = 1 - self.dampingFactor + self.dampingFactor * prT
                 # Pagerank speichern
                 page.setPagerank(pagerank)
-
-                #print(f"PR({page.name}) = {round(page.pagerank, 4)}")
 
                 difference.append(self.calculateDifference(lastRank, pagerank))
 
@@ -225,10 +229,10 @@ class PageRank:
                 sumPageranks = self.getPRSum()
                 print (f"Summe aller Pageranks = {sumPageranks}")
 
-            # Anzahl Durchläufe
             counter = counter + 1
 
         self.showResults()
+
 
     # Unterschied in % zum letzten PR errechnen
     def calculateDifference(self, lastRank, thisRank):
@@ -236,6 +240,7 @@ class PageRank:
         #print (f"Unterschied zu letztem PR = {round(difference, 1)} %")
         #print ('')
         return difference
+
 
     # Gesamtsumme aller PRs berechnen
     def getPRSum(self):
@@ -247,8 +252,7 @@ class PageRank:
         return sumPR
 
 
-
-    # Anzeigen der Seiten und deren finalen PRs (sortiert nach dem PR)
+    # Anzeigen der Seiten und der finalen PRs (sortiert nach dem PR)
     def showResults(self):
         print ('')
         print ("Pageranks:")
@@ -270,7 +274,7 @@ class PageRank:
                 j = i
             print(f"{j}. {page[1]}{p} {page[0]}")
             i += 1
-        print("")
+        print('')
 
 
     def createPlaceholder(self, pageName):
